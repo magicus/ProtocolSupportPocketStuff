@@ -72,7 +72,9 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 			isSpawned = true;
 
 			for (CachedSkullBlock cachedSkullBlock : cachedSkullBlocks.values()) {
-				cachedSkullBlock.spawn(this);
+				if (cachedSkullBlock.isCustomSkull()) {
+					cachedSkullBlock.spawn(this);
+				}
 			}
 			return;
 		}
@@ -131,12 +133,14 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 			Position position = PositionSerializer.readPEPosition(data); // position, we don't care about it, we only care about the position in the compound tag
 			try {
 				NBTTagCompoundWrapper tag = NBTTagCompoundSerializer.readPeTag(data, true);
-				boolean removeTags = parseTag(tag);
 
-				if (removeTags) {
-					tag.remove("Owner");
-					event.setData(new TileDataUpdatePacket(position.getX(), position.getY(), position.getZ(), tag).encode(con));
-				}
+				if (!isSkull(tag))
+					return;
+
+				handleSkull(position, tag);
+
+				tag.remove("Owner");
+				event.setData(new TileDataUpdatePacket(position.getX(), position.getY(), position.getZ(), tag).encode(con));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -160,7 +164,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 
 			System.out.println("And it is cached! Killing it right now :O");
 
-			PocketCon.sendPocketPacket(con, new EntityDestroyPacket(cachedSkullBlocks.get(asLong).getEntityId()));
+			cachedSkullBlocks.get(asLong).destroy(this);
 			cachedSkullBlocks.remove(asLong);
 			return;
 		}
@@ -180,8 +184,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 			data.readByte(); // borders
 			VarNumberSerializer.readSVarInt(data); // extra data
 			while (data.readableBytes() != 0) {
-				// System.out.println("Reading NBT tag...");
-				parseTag(ItemStackSerializer.readTag(data, true, con.getVersion()));
+				handleSkull(null, ItemStackSerializer.readTag(data, true, con.getVersion()));
 			}
 		}
 	}
@@ -190,23 +193,26 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		return ((x & 0x3FFFFFFL) << 38) | ((y & 0xFFFL) << 26) | (z & 0x3FFFFFFL);
 	}
 
-	public boolean parseTag(NBTTagCompoundWrapper tag) {
-		// System.out.println("Parsing tag: " + tag);
+	public boolean isSkull(NBTTagCompoundWrapper tag) {
+		return tag.getString("id").equals("Skull");
+	}
+
+	public String getUrlFromSkull(NBTTagCompoundWrapper tag) {
 		if (!tag.getString("id").equals("Skull"))
-			return false;
+			return null;
 
 		if (!tag.hasKeyOfType("Owner", NBTTagType.COMPOUND))
-			return false;
+			return null;
 
 		NBTTagCompoundWrapper owner = tag.getCompound("Owner");
 
 		if (!owner.hasKeyOfType("Properties", NBTTagType.COMPOUND))
-			return false;
+			return null;
 
 		NBTTagCompoundWrapper properties = owner.getCompound("Properties");
 
 		if (!properties.hasKeyOfType("textures", NBTTagType.LIST))
-			return false;
+			return null;
 
 		String value = properties.getList("textures").getCompound(0).getString("Value");
 
@@ -214,28 +220,45 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 
 		JsonObject json = StuffUtils.JSON_PARSER.parse(_json).getAsJsonObject();
 
-		String url = json.get("textures").getAsJsonObject().get("SKIN").getAsJsonObject().get("url").getAsString();
+		return json.get("textures").getAsJsonObject().get("SKIN").getAsJsonObject().get("url").getAsString();
+	}
 
-		int x = tag.getIntNumber("x");
-		int y = tag.getIntNumber("y");
-		int z = tag.getIntNumber("z");
+	public void handleSkull(Position position, NBTTagCompoundWrapper tag) {
+		if (position == null && tag == null) {
+			throw new RuntimeException("Both Position and NBTTagCompoundWrapper are null!");
+		}
+		if (position == null && tag != null) {
+			int x = tag.getIntNumber("x");
+			int y = tag.getIntNumber("y");
+			int z = tag.getIntNumber("z");
 
-		CachedSkullBlock cachedSkullBlock = new CachedSkullBlock(tag, url);
-
-		if (cachedSkullBlocks.containsKey(asLong(x, y, z))) {
-			System.out.println("Killing the old fake player...");
-			PocketCon.sendPocketPacket(con, new EntityDestroyPacket(cachedSkullBlocks.get(asLong(x, y, z)).getEntityId()));
+			position = new Position(x, y, z);
 		}
 
-		cachedSkullBlocks.put(asLong(x, y, z), cachedSkullBlock);
+		CachedSkullBlock cachedSkullBlock = cachedSkullBlocks.getOrDefault(position.asLong(), new CachedSkullBlock(position));
 
-		System.out.println("isSpawned? " + isSpawned);
+		if (tag != null) {
+			String url = getUrlFromSkull(tag);
+
+			if (url != null) {
+				cachedSkullBlock.url = url;
+				cachedSkullBlock.tag = tag;
+			}
+		}
+
+		cachedSkullBlocks.put(position.asLong(), cachedSkullBlock);
 
 		if (!isSpawned)
-			return true;
+			return;
+
+		if (!cachedSkullBlock.isCustomSkull())
+			return;
+
+		if (cachedSkullBlock.isSpawned) {
+			cachedSkullBlock.destroy(this);
+		}
 
 		cachedSkullBlock.spawn(this);
-		return true;
 	}
 
 	protected static void writeSkinData(ProtocolVersion version, ByteBuf serializer, boolean isSkinUpdate, boolean isSlim, byte[] skindata) {
@@ -276,13 +299,18 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 
 	static class CachedSkullBlock {
 		private long entityId = new SplittableRandom().nextLong(Integer.MAX_VALUE, Long.MAX_VALUE);
+		private Position position;
 		private NBTTagCompoundWrapper tag;
 		private String url;
 		private int dataValue = 1; // TODO
+		private boolean isSpawned = false;
 
-		public CachedSkullBlock(NBTTagCompoundWrapper tag, String url) {
-			this.tag = tag;
-			this.url = url;
+		public CachedSkullBlock(Position position) {
+			this.position = position;
+		}
+
+		public boolean isCustomSkull() {
+			return tag != null && url != null;
 		}
 
 		public long getEntityId() {
@@ -290,6 +318,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		}
 
 		public void spawn(PlayerHeadsPacketListener listener) {
+			isSpawned = true;
 			System.out.println("Spawning...");
 			if (Skins.INSTANCE.hasPeSkin(url)) {
 				sendFakePlayer(listener, url, Skins.INSTANCE.getPeSkin(url));
@@ -297,6 +326,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 				new Thread() {
 					public void run() {
 						try {
+							System.out.println("URL: " + url);
 							BufferedImage image = ImageIO.read(new URL(url));
 							byte[] data = toData(image);
 							sendFakePlayer(listener, url, data);
@@ -395,6 +425,11 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 
 			TileDataUpdatePacket tileDataUpdatePacket = new TileDataUpdatePacket(x, y, z, tag);
 			PocketCon.sendPocketPacket(listener.con, tileDataUpdatePacket);
+		}
+
+		public void destroy(PlayerHeadsPacketListener listener) {
+			isSpawned = false;
+			PocketCon.sendPocketPacket(listener.con, new EntityDestroyPacket(entityId));
 		}
 	}
 }
