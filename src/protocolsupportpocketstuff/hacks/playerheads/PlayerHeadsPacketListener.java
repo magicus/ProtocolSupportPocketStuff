@@ -110,23 +110,9 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 			if (tag.getIntNumber("SkullType") != 3) // We only care about player heads
 				return;
 
-			if (!tag.hasKeyOfType("Owner", NBTTagType.COMPOUND))
-				return;
+			String url = getUrlFromSkull(itemStack.getTag());
 
-			NBTTagCompoundWrapper owner = tag.getCompound("Owner");
-
-			if (!owner.hasKeyOfType("Properties", NBTTagType.COMPOUND))
-				return;
-
-			String signature = owner.getList("textures").getCompound(0).getString("Signature");
-			String value = owner.getList("textures").getCompound(0).getString("Value");
-
-			String _json = new String(Base64.getDecoder().decode(value));
-
-			JsonObject json = StuffUtils.JSON_PARSER.parse(_json).getAsJsonObject();
-			String skinUrl = json.get("textures").getAsJsonObject().get("SKIN").getAsJsonObject().get("url").getAsString();
-
-			System.out.println("Skin URL: " + skinUrl);
+			System.out.println("Skin URL: " + url);
 			return;
 		}
 		if (packetId == PEPacketIDs.TILE_DATA_UPDATE) {
@@ -149,20 +135,39 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		if (packetId == PEPacketIDs.UPDATE_BLOCK) {
 			Position position = PositionSerializer.readPEPosition(data);
 			int id = VarNumberSerializer.readVarInt(data);
+			int flagsAndDataValue = VarNumberSerializer.readVarInt(data);
 
-			System.out.println("Updating block...");
-
-			if (id == SKULL_BLOCK_ID)
-				return;
-
-			System.out.println("It isn't an skull, wow...");
-
-			long asLong = asLong(position.getX(), position.getY(), position.getZ());
+			long asLong = position.asLong();
 
 			if (!cachedSkullBlocks.containsKey(asLong))
 				return;
 
-			System.out.println("And it is cached! Killing it right now :O");
+			int flags = 0;
+
+			if ((flagsAndDataValue & 0x01) != 0) {
+				flags += 0x01;
+			}
+			if ((flagsAndDataValue & 0x02) != 0) {
+				flags += 0x02;
+			}
+			if ((flagsAndDataValue & 0x04) != 0) {
+				flags += 0x04;
+			}
+			if ((flagsAndDataValue & 0x08) != 0) {
+				flags += 0x08;
+			}
+
+			int dataValue = flags & flagsAndDataValue;
+
+			if (id == SKULL_BLOCK_ID) {
+				CachedSkullBlock cachedSkullBlock = cachedSkullBlocks.get(asLong);
+				if (cachedSkullBlock.dataValue != dataValue) { // We only need to respawn the block if the data value has changed
+					cachedSkullBlock.dataValue = dataValue;
+					cachedSkullBlock.destroy(this);
+					cachedSkullBlock.spawn(this);
+				}
+				return;
+			}
 
 			cachedSkullBlocks.get(asLong).destroy(this);
 			cachedSkullBlocks.remove(asLong);
@@ -187,10 +192,6 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 				handleSkull(null, ItemStackSerializer.readTag(data, true, con.getVersion()));
 			}
 		}
-	}
-
-	public static long asLong(int x, int y, int z) {
-		return ((x & 0x3FFFFFFL) << 38) | ((y & 0xFFFL) << 26) | (z & 0x3FFFFFFL);
 	}
 
 	public boolean isSkull(NBTTagCompoundWrapper tag) {
