@@ -49,8 +49,8 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 	private ProtocolSupportPocketStuff plugin;
 	private Connection con;
 	private boolean isSpawned = false;
-	private final HashMap<Long, CachedSkullBlock> fakePlayers = new HashMap<Long, CachedSkullBlock>();
-	private static final int PLAYER_SKULL_ID = 144;
+	private final HashMap<Long, CachedSkullBlock> cachedSkullBlocks = new HashMap<Long, CachedSkullBlock>();
+	private static final int SKULL_BLOCK_ID = 144;
 
 	public PlayerHeadsPacketListener(ProtocolSupportPocketStuff plugin, Connection con) {
 		this.plugin = plugin;
@@ -71,7 +71,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 
 			isSpawned = true;
 
-			for (CachedSkullBlock cachedSkullBlock : fakePlayers.values()) {
+			for (CachedSkullBlock cachedSkullBlock : cachedSkullBlocks.values()) {
 				cachedSkullBlock.spawn(this);
 			}
 			return;
@@ -88,11 +88,11 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 
 		if (packetId == PEPacketIDs.CHANGE_DIMENSION) {
 			System.out.println("CHANGE DIMENSION!!!");
-			for (CachedSkullBlock cachedSkullBlock : fakePlayers.values()) {
+			for (CachedSkullBlock cachedSkullBlock : cachedSkullBlocks.values()) {
 				System.out.println("Killing skull head with ID: " + cachedSkullBlock.getEntityId());
 				PocketCon.sendPocketPacket(con, new EntityDestroyPacket(cachedSkullBlock.getEntityId()));
 			}
-			fakePlayers.clear();
+			cachedSkullBlocks.clear();
 			return;
 		}
 		if (packetId == PEPacketIDs.MOB_ARMOR_EQUIPMENT) {
@@ -148,20 +148,20 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 
 			System.out.println("Updating block...");
 
-			if (id == PLAYER_SKULL_ID)
+			if (id == SKULL_BLOCK_ID)
 				return;
 
 			System.out.println("It isn't an skull, wow...");
 
 			long asLong = asLong(position.getX(), position.getY(), position.getZ());
 
-			if (!fakePlayers.containsKey(asLong))
+			if (!cachedSkullBlocks.containsKey(asLong))
 				return;
 
 			System.out.println("And it is cached! Killing it right now :O");
 
-			PocketCon.sendPocketPacket(con, new EntityDestroyPacket(fakePlayers.get(asLong).getEntityId()));
-			fakePlayers.remove(asLong);
+			PocketCon.sendPocketPacket(con, new EntityDestroyPacket(cachedSkullBlocks.get(asLong).getEntityId()));
+			cachedSkullBlocks.remove(asLong);
 			return;
 		}
 		if (packetId == PEPacketIDs.CHUNK_DATA) {
@@ -222,12 +222,12 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 
 		CachedSkullBlock cachedSkullBlock = new CachedSkullBlock(tag, url);
 
-		if (fakePlayers.containsKey(asLong(x, y, z))) {
+		if (cachedSkullBlocks.containsKey(asLong(x, y, z))) {
 			System.out.println("Killing the old fake player...");
-			PocketCon.sendPocketPacket(con, new EntityDestroyPacket(fakePlayers.get(asLong(x, y, z)).getEntityId()));
+			PocketCon.sendPocketPacket(con, new EntityDestroyPacket(cachedSkullBlocks.get(asLong(x, y, z)).getEntityId()));
 		}
 
-		fakePlayers.put(asLong(x, y, z), cachedSkullBlock);
+		cachedSkullBlocks.put(asLong(x, y, z), cachedSkullBlock);
 
 		System.out.println("isSpawned? " + isSpawned);
 
@@ -378,7 +378,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 					uuid,
 					"",
 					entityId,
-					(float) (x + 0.5), y + (float) new SplittableRandom().nextDouble(0, 6), (float) (z + 0.5), // coordinates
+					(float) (x + 0.5), y, (float) (z + 0.5), // coordinates
 					0, 0, 0, // motion
 					0, 0, yaw, // pitch, head yaw & yaw
 					metadata

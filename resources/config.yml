@@ -52,9 +52,5 @@ hacks:
  itemframes: false
  teams: false
  bossbars: false
-<<<<<<< HEAD
  player-heads-skins: false
 config-version: 1
-=======
-config-version: 1
->>>>>>> origin/master
