@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.SplittableRandom;
 import java.util.UUID;
 
@@ -48,7 +49,10 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 	private ProtocolSupportPocketStuff plugin;
 	private Connection con;
 	private boolean isSpawned = false;
-	private final HashMap<Long, CachedSkullBlock> cachedSkullBlocks = new HashMap<Long, CachedSkullBlock>();
+	private final HashMap<Long, CachedSkullBlock> cachedSkullBlocks = new HashMap<>();
+	private final HashMap<Long, UUID> entityIdToUuid = new HashMap<>();
+	private final HashSet<Long> hasCustomSkull = new HashSet<>();
+
 	private static final int SKULL_BLOCK_ID = 144;
 
 	public PlayerHeadsPacketListener(ProtocolSupportPocketStuff plugin, Connection con) {
@@ -87,6 +91,13 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		data.readByte();
 		data.readByte();
 
+		if (packetId == PEPacketIDs.SPAWN_PLAYER) {
+			UUID uuid = MiscSerializer.readUUID(data);
+			StringSerializer.readString(data, ProtocolVersion.MINECRAFT_PE); // player username
+			long entityId = VarNumberSerializer.readSVarLong(data);
+			entityIdToUuid.put(entityId, uuid);
+			return;
+		}
 		if (packetId == PEPacketIDs.CHANGE_DIMENSION) {
 			System.out.println("CHANGE DIMENSION!!!");
 			for (CachedSkullBlock cachedSkullBlock : cachedSkullBlocks.values()) {
@@ -99,16 +110,63 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		if (packetId == PEPacketIDs.MOB_ARMOR_EQUIPMENT) {
 			long entityId = VarNumberSerializer.readVarLong(data);
 
-			ItemStackWrapper itemStack = ItemStackSerializer.readItemStack(data, con.getVersion(), I18NData.DEFAULT_LOCALE, true);
+			System.out.println("Equip for " + entityId);
 
-			if (itemStack.isNull() || itemStack.getTypeId() != 397)
+			if (!entityIdToUuid.containsKey(entityId))
 				return;
 
+			System.out.println("Contains!");
+
+			ItemStackWrapper itemStack = ItemStackSerializer.readItemStack(data, con.getVersion(), I18NData.DEFAULT_LOCALE, false); // Yes, it is from the client, but we don't want it to remap our stuff
+
+			if (itemStack.isNull() || itemStack.getTypeId() != 397) {
+				if (hasCustomSkull.contains(entityId)) {
+					hasCustomSkull.remove(entityId);
+					sendOriginalSkin(entityIdToUuid.get(entityId));
+				}
+				return;
+			}
+
+			System.out.println("And it is really an skull!");
+
 			NBTTagCompoundWrapper tag = itemStack.getTag();
+
+			System.out.println(tag);
 
 			String url = getUrlFromSkull(tag, true);
 
 			System.out.println("Skin URL: " + url);
+
+			event.setCancelled(true);
+			// Because we are going to replace it with a fancy skin, let's remove the player's equip
+			ByteBuf serializer = Unpooled.buffer();
+			VarNumberSerializer.writeVarInt(serializer, PEPacketIDs.MOB_ARMOR_EQUIPMENT);
+			serializer.writeByte(0);
+			serializer.writeByte(0);
+			VarNumberSerializer.writeSVarLong(serializer, entityId);
+			ItemStackSerializer.writeItemStack(serializer, con.getVersion(), I18NData.DEFAULT_LOCALE, ItemStackWrapper.NULL,false);
+			ItemStackSerializer.writeItemStack(serializer, con.getVersion(), I18NData.DEFAULT_LOCALE, ItemStackSerializer.readItemStack(data, con.getVersion(), I18NData.DEFAULT_LOCALE, false),false);
+			ItemStackSerializer.writeItemStack(serializer, con.getVersion(), I18NData.DEFAULT_LOCALE, ItemStackSerializer.readItemStack(data, con.getVersion(), I18NData.DEFAULT_LOCALE, false),false);
+			ItemStackSerializer.writeItemStack(serializer, con.getVersion(), I18NData.DEFAULT_LOCALE, ItemStackSerializer.readItemStack(data, con.getVersion(), I18NData.DEFAULT_LOCALE, false),false);
+			event.setData(serializer);
+			hasCustomSkull.add(entityId);
+			new Thread() {
+				public void run() {
+					UUID uuid = entityIdToUuid.get(entityId);
+					if (Skins.INSTANCE.hasPeSkin(url)) {
+						sendSkullSkin(Skins.INSTANCE.getPeSkin(url), uuid);
+					} else {
+						try {
+							BufferedImage image = ImageIO.read(new URL(url));
+							byte[] data = toData(image);
+							sendSkullSkin(data, uuid);
+							Skins.INSTANCE.cachePeSkin(url, data);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			}.start();
 			return;
 		}
 		if (packetId == PEPacketIDs.TILE_DATA_UPDATE) {
@@ -243,6 +301,36 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		}
 	}
 
+	public void sendSkullSkin(byte[] skullSkin, UUID uuid) {
+		PESkinModel model = PESkinModel.getSkinModel(false);
+
+		byte[] originalSkin = Skins.INSTANCE.getSkinFromUUID(uuid).clone();
+
+		System.arraycopy(skullSkin, 0, originalSkin, 0, 1024 * 4);
+
+		ByteBuf serializer = Unpooled.buffer();
+		VarNumberSerializer.writeVarInt(serializer, PEPacketIDs.PLAYER_SKIN);
+		serializer.writeByte(0);
+		serializer.writeByte(0);
+		MiscSerializer.writeUUID(serializer, uuid);
+		writeSkinData2(con.getVersion(), serializer, true, false, originalSkin);
+		con.sendRawPacket(MiscSerializer.readAllBytes(serializer));
+	}
+
+	public void sendOriginalSkin(UUID uuid) {
+		PESkinModel model = PESkinModel.getSkinModel(false);
+
+		byte[] originalSkin = Skins.INSTANCE.getSkinFromUUID(uuid).clone();
+
+		ByteBuf serializer = Unpooled.buffer();
+		VarNumberSerializer.writeVarInt(serializer, PEPacketIDs.PLAYER_SKIN);
+		serializer.writeByte(0);
+		serializer.writeByte(0);
+		MiscSerializer.writeUUID(serializer, uuid);
+		writeSkinData2(con.getVersion(), serializer, true, false, originalSkin);
+		con.sendRawPacket(MiscSerializer.readAllBytes(serializer));
+	}
+
 	public boolean isSkull(NBTTagCompoundWrapper tag) {
 		return tag.getString("id").equals("Skull");
 	}
@@ -325,6 +413,26 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		StringSerializer.writeString(serializer, version, "geometry.Mobs.Skeleton2");
 		try {
 			StringSerializer.writeString(serializer, version, FileUtils.readFileToString(new File("D:\\armor_stand.json")));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	protected static void writeSkinData2(ProtocolVersion version, ByteBuf serializer, boolean isSkinUpdate, boolean isSlim, byte[] skindata) {
+		PESkinModel model = PESkinModel.getSkinModel(isSlim);
+		if (isSkinUpdate) {
+			StringSerializer.writeString(serializer, version, "6bcfb27d-7e0f-466d-a3d3-3764223e8c3b_Custom");
+		}
+		StringSerializer.writeString(serializer, version, "geometry.humanoid_with_custom_head");
+		if (isSkinUpdate) {
+			//TODO: find out how it is used and if its use matters.
+			StringSerializer.writeString(serializer, version, "Steve");
+		}
+		ArraySerializer.writeByteArray(serializer, version, skindata);
+		ArraySerializer.writeByteArray(serializer, version, new byte[0]); //cape data
+		StringSerializer.writeString(serializer, version, "geometry.humanoid_with_custom_head");
+		try {
+			StringSerializer.writeString(serializer, version, FileUtils.readFileToString(new File("D:\\custom_models.json")));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
