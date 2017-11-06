@@ -4,7 +4,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.Validate;
-import org.bukkit.Material;
 import protocolsupport.api.Connection;
 import protocolsupport.api.ProtocolVersion;
 import protocolsupport.libs.com.google.gson.JsonObject;
@@ -102,30 +101,27 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 
 			ItemStackWrapper itemStack = ItemStackSerializer.readItemStack(data, con.getVersion(), I18NData.DEFAULT_LOCALE, true);
 
+			if (itemStack.isNull() || itemStack.getTypeId() != 397)
+				return;
+
 			NBTTagCompoundWrapper tag = itemStack.getTag();
 
-			if (itemStack.isNull() || itemStack.getType() != Material.SKULL_ITEM)
-				return;
-
-			if (tag.getIntNumber("SkullType") != 3) // We only care about player heads
-				return;
-
-			String url = getUrlFromSkull(itemStack.getTag());
+			String url = getUrlFromSkull(tag, true);
 
 			System.out.println("Skin URL: " + url);
 			return;
 		}
 		if (packetId == PEPacketIDs.TILE_DATA_UPDATE) {
-			Position position = PositionSerializer.readPEPosition(data); // position, we don't care about it, we only care about the position in the compound tag
+			Position position = PositionSerializer.readPEPosition(data);
 			try {
 				NBTTagCompoundWrapper tag = NBTTagCompoundSerializer.readPeTag(data, true);
 
 				if (!isSkull(tag))
 					return;
 
-				handleSkull(position, tag);
+				handleSkull(position, tag, -1);
 
-				tag.remove("Owner");
+				tag.remove("Owner"); // remove the owner tag, if we don't remove it, the skull stays with the default parameters (skeleton with rot 0)
 				event.setData(new TileDataUpdatePacket(position.getX(), position.getY(), position.getZ(), tag).encode(con));
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -138,9 +134,6 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 			int flagsAndDataValue = VarNumberSerializer.readVarInt(data);
 
 			long asLong = position.asLong();
-
-			if (!cachedSkullBlocks.containsKey(asLong))
-				return;
 
 			int flags = 0;
 
@@ -160,6 +153,13 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 			int dataValue = flags & flagsAndDataValue;
 
 			if (id == SKULL_BLOCK_ID) {
+				if (!cachedSkullBlocks.containsKey(asLong)) {
+					CachedSkullBlock cachedSkullBlock = new CachedSkullBlock(position);
+					cachedSkullBlock.dataValue = dataValue; // Store the new dataValue from this block
+					cachedSkullBlocks.put(asLong, cachedSkullBlock);
+					return;
+				}
+
 				CachedSkullBlock cachedSkullBlock = cachedSkullBlocks.get(asLong);
 				if (cachedSkullBlock.dataValue != dataValue) { // We only need to respawn the block if the data value has changed
 					cachedSkullBlock.dataValue = dataValue;
@@ -169,27 +169,76 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 				return;
 			}
 
-			cachedSkullBlocks.get(asLong).destroy(this);
-			cachedSkullBlocks.remove(asLong);
+			if (cachedSkullBlocks.containsKey(asLong)) {
+				cachedSkullBlocks.get(asLong).destroy(this);
+				cachedSkullBlocks.remove(asLong);
+			}
 			return;
 		}
 		if (packetId == PEPacketIDs.CHUNK_DATA) {
-			VarNumberSerializer.readSVarInt(data); // chunk X
-			VarNumberSerializer.readSVarInt(data); // chunk Z
+			int chunkX = VarNumberSerializer.readSVarInt(data); // chunk X
+			int chunkZ = VarNumberSerializer.readSVarInt(data); // chunk Z
 			VarNumberSerializer.readVarInt(data); // length
 			int sectionLength = data.readByte();
-			// System.out.println("Section length: " + sectionLength);
-			// data.skipBytes(10241 * sectionLength);
+
+			int chunkXStart = chunkX << 4;
+			int chunkZStart = chunkZ << 4;
+
+			HashMap<Long, Integer> skulls = new HashMap<>();
+
 			for (int idx = 0; sectionLength > idx; idx++) {
 				data.readByte(); // storage type
-				data.skipBytes(4096 + 2048); // skip data, we don't care about that
+				for (int x = 0; x < 16; x++) {
+					for (int z = 0; z < 16; z++) {
+						for (int y = 0; y < 16; y++) {
+							int id = data.readUnsignedByte();
+
+							if (id == SKULL_BLOCK_ID) {
+								skulls.put(StuffUtils.toLong(chunkXStart + x, (idx * 16) + y, chunkZStart + z), -1);
+							}
+						}
+					}
+				}
+				for (int x = 0; x < 16; x++) {
+					for (int z = 0; z < 16; z++) {
+						for (int y = 0; y < 16; y += 2) {
+							long position = StuffUtils.toLong(chunkXStart + x, (idx * 16) + y, chunkZStart + z);
+							long positionAbove = StuffUtils.toLong(chunkXStart + x, (idx * 16) + y + 1, chunkZStart + z);
+							int state = data.readUnsignedByte();
+
+							int dataValueAbove = state >> 4;
+							int dataValue = state & 0x0F;
+
+							if (skulls.containsKey(position)) {
+								skulls.put(position, dataValue);
+							}
+							if (skulls.containsKey(positionAbove)) {
+								skulls.put(position, dataValueAbove);
+							}
+						}
+					}
+				}
 			}
+
 			data.skipBytes(512); // heights
 			data.skipBytes(256); // biomes
 			data.readByte(); // borders
 			VarNumberSerializer.readSVarInt(data); // extra data
 			while (data.readableBytes() != 0) {
-				handleSkull(null, ItemStackSerializer.readTag(data, true, con.getVersion()));
+				NBTTagCompoundWrapper tag = ItemStackSerializer.readTag(data, true, con.getVersion());
+
+				if (!isSkull(tag))
+					return;
+
+				int x = tag.getIntNumber("x");
+				int y = tag.getIntNumber("y");
+				int z = tag.getIntNumber("z");
+
+				Position position = new Position(x, y, z);
+
+				// Is there's any possibility of an skull being on the chunk nbt tags but not really in the world? idk
+				// So that's why getOrDefault is used
+				handleSkull(position, tag, skulls.getOrDefault(position.asLong(), 1));
 			}
 		}
 	}
@@ -198,14 +247,11 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		return tag.getString("id").equals("Skull");
 	}
 
-	public String getUrlFromSkull(NBTTagCompoundWrapper tag) {
-		if (!tag.getString("id").equals("Skull"))
+	public String getUrlFromSkull(NBTTagCompoundWrapper tag, boolean isItem) {
+		if (!tag.hasKeyOfType(isItem ? "SkullOwner" : "Owner", NBTTagType.COMPOUND))
 			return null;
 
-		if (!tag.hasKeyOfType("Owner", NBTTagType.COMPOUND))
-			return null;
-
-		NBTTagCompoundWrapper owner = tag.getCompound("Owner");
+		NBTTagCompoundWrapper owner = tag.getCompound(isItem ? "SkullOwner" : "Owner");
 
 		if (!owner.hasKeyOfType("Properties", NBTTagType.COMPOUND))
 			return null;
@@ -224,11 +270,11 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		return json.get("textures").getAsJsonObject().get("SKIN").getAsJsonObject().get("url").getAsString();
 	}
 
-	public void handleSkull(Position position, NBTTagCompoundWrapper tag) {
+	public void handleSkull(Position position, NBTTagCompoundWrapper tag, int dataValue) {
 		if (position == null && tag == null) {
 			throw new RuntimeException("Both Position and NBTTagCompoundWrapper are null!");
 		}
-		if (position == null && tag != null) {
+		if (position == null) {
 			int x = tag.getIntNumber("x");
 			int y = tag.getIntNumber("y");
 			int z = tag.getIntNumber("z");
@@ -237,9 +283,11 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		}
 
 		CachedSkullBlock cachedSkullBlock = cachedSkullBlocks.getOrDefault(position.asLong(), new CachedSkullBlock(position));
+		if (dataValue != -1)
+			cachedSkullBlock.dataValue = dataValue;
 
 		if (tag != null) {
-			String url = getUrlFromSkull(tag);
+			String url = getUrlFromSkull(tag, false);
 
 			if (url != null) {
 				cachedSkullBlock.url = url;
@@ -303,7 +351,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		private Position position;
 		private NBTTagCompoundWrapper tag;
 		private String url;
-		private int dataValue = 1; // TODO
+		private int dataValue = 1;
 		private boolean isSpawned = false;
 
 		public CachedSkullBlock(Position position) {
@@ -344,72 +392,97 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 			int x = tag.getIntNumber("x");
 			int y = tag.getIntNumber("y");
 			int z = tag.getIntNumber("z");
-			int rot = tag.getByteNumber("Rot");
 
 			CollectionsUtils.ArrayMap<DataWatcherObject<?>> metadata = new CollectionsUtils.ArrayMap<>(76);
 
-			metadata.put(39, new DataWatcherObjectFloatLe(1.05f)); // scale
+			metadata.put(39, new DataWatcherObjectFloatLe(1.05f)); // scale, needs to be a *bit* bigger than the original skull
 			metadata.put(54, new DataWatcherObjectFloatLe(0.001f)); // bb width
 			metadata.put(55, new DataWatcherObjectFloatLe(0.001f)); // bb height
 
 			UUID uuid = UUID.randomUUID();
 
 			float yaw = 0;
-			switch (rot) {
-				case 0:
-					yaw = 180F;
-					break;
-				case 1:
-					yaw = 202.5F;
-					break;
-				case 2:
-					yaw = 225F;
-					break;
-				case 3:
-					yaw = 247.5F;
-					break;
-				case 4:
-					yaw = 270F;
-					break;
-				case 5:
-					yaw = 292.5F;
-					break;
-				case 6:
-					yaw = 315F;
-					break;
-				case 7:
-					yaw = 337.5F;
-					break;
-				case 8:
-					yaw = 0F;
-					break;
-				case 9:
-					yaw = 22.5F;
-					break;
-				case 10:
-					yaw = 45F;
-					break;
-				case 11:
-					yaw = 67.5F;
-					break;
-				case 12:
-					yaw = 90F;
-					break;
-				case 13:
-					yaw = 112.5F;
-					break;
-				case 14:
-					yaw = 135F;
-					break;
-				case 15:
-					yaw = 157.5F;
-					break;
+			float xOffset = 0.5F;
+			float yOffset = 0.0F;
+			float zOffset = 0.5F;
+
+			if (dataValue == 1) { // on ground
+				int rot = tag.getByteNumber("Rot");
+				switch (rot) {
+					case 0:
+						yaw = 180F;
+						break;
+					case 1:
+						yaw = 202.5F;
+						break;
+					case 2:
+						yaw = 225F;
+						break;
+					case 3:
+						yaw = 247.5F;
+						break;
+					case 4:
+						yaw = 270F;
+						break;
+					case 5:
+						yaw = 292.5F;
+						break;
+					case 6:
+						yaw = 315F;
+						break;
+					case 7:
+						yaw = 337.5F;
+						break;
+					case 8:
+						yaw = 0F;
+						break;
+					case 9:
+						yaw = 22.5F;
+						break;
+					case 10:
+						yaw = 45F;
+						break;
+					case 11:
+						yaw = 67.5F;
+						break;
+					case 12:
+						yaw = 90F;
+						break;
+					case 13:
+						yaw = 112.5F;
+						break;
+					case 14:
+						yaw = 135F;
+						break;
+					case 15:
+						yaw = 157.5F;
+						break;
+				}
+			} else { // on walls
+				yOffset = 0.25F;
+
+				if (dataValue == 2) {
+					zOffset = 0.75F;
+					yaw = 180;
+				}
+				if (dataValue == 3) {
+					zOffset = 0.25F;
+					yaw = 0;
+				}
+				if (dataValue == 4) {
+					xOffset = 0.75F;
+					yaw = 90;
+				}
+				if (dataValue == 5) {
+					xOffset = 0.25F;
+					yaw = 270;
+				}
 			}
 			SpawnPlayerPacket packet = new SpawnPlayerPacket(
 					uuid,
 					"",
 					entityId,
-					(float) (x + 0.5), y, (float) (z + 0.5), // coordinates
+					x + xOffset, y + yOffset, (float) z + zOffset, // coordinates
 					0, 0, 0, // motion
 					0, 0, yaw, // pitch, head yaw & yaw
 					metadata

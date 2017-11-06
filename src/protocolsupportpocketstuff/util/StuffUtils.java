@@ -18,6 +18,10 @@ public class StuffUtils {
 	public static final String APPLY_SKIN_ON_JOIN_KEY = "applySkinOnJoin";
 	public static final String CLIENT_INFO_KEY = "clientInformationMap";
 
+	public static long toLong(int x, int y, int z) { // From ProtocolSupport's "Position" class, used here so we don't need to initialize an Position object every time
+		return ((x & 0x3FFFFFFL) << 38) | ((y & 0xFFFL) << 26) | ((z & 0x3FFFFFFL));
+	}
+
 	public static String toLegacy(IChatBaseComponent s) {
 		StringBuilder builder = new StringBuilder();
 		legacy(builder, s);
