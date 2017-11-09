@@ -1,6 +1,7 @@
 package protocolsupportpocketstuff.skin;
 
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import protocolsupport.api.Connection;
@@ -28,13 +29,14 @@ public class SkinListener implements Listener {
 		this.plugin = plugin;
 	}
 
-	@EventHandler
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerPropertiesResolve(PlayerPropertiesResolveEvent e) {
 		Connection con = e.getConnection();
 		if (PocketCon.isPocketConnection(con)) {
 			if (con.hasMetadata(StuffUtils.APPLY_SKIN_ON_JOIN_KEY)) {
 				plugin.debug("Applying cached skin for " + e.getConnection() + "...");
 				SkinUtils.SkinDataWrapper skinDataWrapper = (SkinUtils.SkinDataWrapper) con.getMetadata(StuffUtils.APPLY_SKIN_ON_JOIN_KEY);
+				e.removeProperty("textures"); // Remove old texture property, if it had one
 				e.addProperty(new PlayerPropertiesResolveEvent.ProfileProperty(StuffUtils.SKIN_PROPERTY_NAME, skinDataWrapper.getValue(), skinDataWrapper.getSignature()));
 				con.removeMetadata(StuffUtils.APPLY_SKIN_ON_JOIN_KEY);
 			}
