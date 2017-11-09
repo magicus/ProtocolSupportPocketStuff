@@ -20,8 +20,6 @@ import protocolsupportpocketstuff.api.util.SkinUtils;
 import protocolsupportpocketstuff.util.MineskinThread;
 import protocolsupportpocketstuff.util.StuffUtils;
 
-import java.util.Map;
-
 public class SkinListener implements Listener {
 	
 	private ProtocolSupportPocketStuff plugin;
@@ -32,7 +30,6 @@ public class SkinListener implements Listener {
 
 	@EventHandler
 	public void onPlayerPropertiesResolve(PlayerPropertiesResolveEvent e) {
-		System.out.println("INSTANCE: " + e.getConnection().getPlayer() + " ~ " + e.getName());
 		Connection con = e.getConnection();
 		if (PocketCon.isPocketConnection(con)) {
 			if (con.hasMetadata(StuffUtils.APPLY_SKIN_ON_JOIN_KEY)) {
@@ -41,10 +38,6 @@ public class SkinListener implements Listener {
 				e.addProperty(new PlayerPropertiesResolveEvent.ProfileProperty(StuffUtils.SKIN_PROPERTY_NAME, skinDataWrapper.getValue(), skinDataWrapper.getSignature()));
 				con.removeMetadata(StuffUtils.APPLY_SKIN_ON_JOIN_KEY);
 			}
-		}
-		System.out.println("props");
-		for (Map.Entry<String, PlayerPropertiesResolveEvent.ProfileProperty> prop : e.getProperties().entrySet()) {
-			System.out.println(prop.getKey() + " ~ " + prop.getValue());
 		}
 	}
 
