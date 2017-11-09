@@ -1,5 +1,6 @@
 package protocolsupportpocketstuff.packet.handshake;
 
+import com.google.common.reflect.TypeToken;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
@@ -8,6 +9,7 @@ import protocolsupport.api.ProtocolType;
 import protocolsupport.libs.com.google.gson.JsonObject;
 import protocolsupport.protocol.serializer.ArraySerializer;
 import protocolsupport.protocol.typeremapper.pe.PEPacketIDs;
+import protocolsupport.utils.Utils;
 import protocolsupportpocketstuff.ProtocolSupportPocketStuff;
 import protocolsupportpocketstuff.packet.PEPacket;
 import protocolsupportpocketstuff.storage.Skins;
@@ -21,11 +23,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class ClientLoginPacket extends PEPacket {
-	int protocolVersion;
-	JsonObject clientPayload;
+	private int protocolVersion;
+	private JsonObject clientPayload;
+	private Map<String, List<String>> map;
 
 	public ClientLoginPacket() { }
 
@@ -45,9 +50,11 @@ public class ClientLoginPacket extends PEPacket {
 		protocolVersion = clientData.readInt(); //protocol version
 
 		ByteBuf logindata = Unpooled.wrappedBuffer(ArraySerializer.readByteArray(clientData, connection.getVersion()));
-
-		// skip chain data
-		logindata.skipBytes(logindata.readIntLE());
+		//decode chain
+		map = Utils.GSON.fromJson(
+				new InputStreamReader(new ByteBufInputStream(logindata, logindata.readIntLE())),
+				new TypeToken<Map<String, List<String>>>() {}.getType()
+		);
 
 		// decode skin data
 		try {
@@ -95,6 +102,17 @@ public class ClientLoginPacket extends PEPacket {
 			ClientLoginPacket clientLoginPacket = ClientLoginPacket.this;
 			JsonObject clientPayload = clientLoginPacket.clientPayload;
 
+			for (String c : map.get("chain")) {
+				JsonObject chainMap = decodeToken(c);
+				if ((chainMap != null) && chainMap.has("extraData")) {
+					JsonObject extra = chainMap.get("extraData").getAsJsonObject();
+
+					if (extra.has("identity")) {
+						connection.addMetadata(StuffUtils.CLIENT_UUID_KEY, UUID.fromString(extra.get("identity").getAsString()));
+					}
+				}
+			}
+
 			HashMap<String, Object> clientInfo = new HashMap<>();
 			clientInfo.put("ClientRandomId", clientPayload.get("ClientRandomId").getAsLong());
 			clientInfo.put("DeviceModel", clientPayload.get("DeviceModel").getAsString());
@@ -110,6 +128,7 @@ public class ClientLoginPacket extends PEPacket {
 				connection.addMetadata(StuffUtils.APPLY_SKIN_ON_JOIN_KEY, Skins.INSTANCE.getPcSkin(uniqueSkinId));
 				return;
 			}
+
 			byte[] skinByteArray = Base64.getDecoder().decode(skinData);
 
 			MineskinThread mineskinThread = new MineskinThread(plugin, connection, uniqueSkinId, skinByteArray, clientLoginPacket.clientPayload.get("SkinGeometryName").getAsString().equals("geometry.humanoid.customSlim"));

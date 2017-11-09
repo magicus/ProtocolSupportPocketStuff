@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.World.Environment;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
+import protocolsupport.api.Connection;
 import protocolsupport.api.ProtocolSupportAPI;
 import protocolsupport.api.ProtocolType;
 import protocolsupportpocketstuff.api.modals.Modal;
@@ -11,6 +12,7 @@ import protocolsupportpocketstuff.api.modals.callback.ModalCallback;
 import protocolsupportpocketstuff.api.skins.PocketSkinModel;
 import protocolsupportpocketstuff.packet.PEPacket;
 import protocolsupportpocketstuff.storage.Modals;
+import protocolsupportpocketstuff.util.StuffUtils;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -171,6 +173,18 @@ public class PocketPlayer {
 	 */
 	public static String getClientVersion(Player player) {
 		return PocketCon.getClientVersion(ProtocolSupportAPI.getConnection(player));
+	}
+
+	/***
+	 * Gets the client unique identifier
+	 * <br/><br/>
+	 * <b>This isn't the server unique identifier for the player</b>, this unique ID is sent by the client during login and
+	 * it is used for skin updates, player list updates and other misc stuff.
+	 * @param player
+	 * @return the client unique identifier
+	 */
+	public static UUID getClientUniqueId(Player player) {
+		return PocketCon.getClientUniqueId(ProtocolSupportAPI.getConnection(player));
 	}
 
 	/***
