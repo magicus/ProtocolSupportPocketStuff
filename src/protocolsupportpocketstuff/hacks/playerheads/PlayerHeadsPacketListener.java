@@ -312,7 +312,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		VarNumberSerializer.writeVarInt(serializer, PEPacketIDs.PLAYER_SKIN);
 		serializer.writeByte(0);
 		serializer.writeByte(0);
-		MiscSerializer.writeUUID(serializer, uuid);
+		MiscSerializer.writeUUID(serializer, con.getVersion(), uuid);
 		writeSkinData2(con.getVersion(), serializer, true, false, originalSkin);
 		con.sendRawPacket(MiscSerializer.readAllBytes(serializer));
 	}
@@ -326,7 +326,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		VarNumberSerializer.writeVarInt(serializer, PEPacketIDs.PLAYER_SKIN);
 		serializer.writeByte(0);
 		serializer.writeByte(0);
-		MiscSerializer.writeUUID(serializer, uuid);
+		MiscSerializer.writeUUID(serializer, con.getVersion(), uuid);
 		writeSkinData2(con.getVersion(), serializer, true, false, originalSkin);
 		con.sendRawPacket(MiscSerializer.readAllBytes(serializer));
 	}
@@ -600,7 +600,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 			VarNumberSerializer.writeVarInt(serializer, PEPacketIDs.PLAYER_SKIN);
 			serializer.writeByte(0);
 			serializer.writeByte(0);
-			MiscSerializer.writeUUID(serializer, uuid);
+			MiscSerializer.writeUUID(serializer, listener.con.getVersion(), uuid);
 			writeSkinData(listener.con.getVersion(), serializer, true, false, data);
 			PocketCon.sendPocketPacket(listener.con, packet);
 			listener.con.sendRawPacket(MiscSerializer.readAllBytes(serializer));
