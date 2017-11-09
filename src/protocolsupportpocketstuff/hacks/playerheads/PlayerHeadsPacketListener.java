@@ -28,6 +28,7 @@ import protocolsupportpocketstuff.ProtocolSupportPocketStuff;
 import protocolsupportpocketstuff.api.util.PocketCon;
 import protocolsupportpocketstuff.packet.TileDataUpdatePacket;
 import protocolsupportpocketstuff.packet.play.EntityDestroyPacket;
+import protocolsupportpocketstuff.packet.play.SkinPacket;
 import protocolsupportpocketstuff.packet.play.SpawnPlayerPacket;
 import protocolsupportpocketstuff.storage.Skins;
 import protocolsupportpocketstuff.util.StuffUtils;
@@ -52,7 +53,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 	private final HashMap<Long, CachedSkullBlock> cachedSkullBlocks = new HashMap<>();
 	private final HashMap<Long, UUID> entityIdToUuid = new HashMap<>();
 	private final HashSet<Long> hasCustomSkull = new HashSet<>();
-
+	private static final String SKULL_MODEL = StuffUtils.getResourceAsString("models/fake_skull_block.json");
 	private static final int SKULL_BLOCK_ID = 144;
 
 	public PlayerHeadsPacketListener(ProtocolSupportPocketStuff plugin, Connection con) {
@@ -398,26 +399,6 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		cachedSkullBlock.spawn(this);
 	}
 
-	protected static void writeSkinData(ProtocolVersion version, ByteBuf serializer, boolean isSkinUpdate, boolean isSlim, byte[] skindata) {
-		PESkinModel model = PESkinModel.getSkinModel(isSlim);
-		if (isSkinUpdate) {
-			StringSerializer.writeString(serializer, version, "6bcfb27d-7e0f-466d-a3d3-3764223e8c3b_Custom");
-		}
-		StringSerializer.writeString(serializer, version, "geometry.Mobs.Skeleton2");
-		if (isSkinUpdate) {
-			//TODO: find out how it is used and if its use matters.
-			StringSerializer.writeString(serializer, version, "Steve");
-		}
-		ArraySerializer.writeByteArray(serializer, version, skindata);
-		ArraySerializer.writeByteArray(serializer, version, new byte[0]); //cape data
-		StringSerializer.writeString(serializer, version, "geometry.Mobs.Skeleton2");
-		try {
-			StringSerializer.writeString(serializer, version, FileUtils.readFileToString(new File("D:\\armor_stand.json")));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
 	protected static void writeSkinData2(ProtocolVersion version, ByteBuf serializer, boolean isSkinUpdate, boolean isSlim, byte[] skindata) {
 		PESkinModel model = PESkinModel.getSkinModel(isSlim);
 		if (isSkinUpdate) {
@@ -603,6 +584,16 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 			MiscSerializer.writeUUID(serializer, listener.con.getVersion(), uuid);
 			writeSkinData(listener.con.getVersion(), serializer, true, false, data);
 			PocketCon.sendPocketPacket(listener.con, packet);
+			PocketCon.sendPocketPacket(listener.con, new SkinPacket(
+					uuid,
+					"d5c91b67-3d30-4aee-b99f-859542f02ea9_Skull",
+					"geometry.Tiles.PSPEFakeSkull",
+					"Steve",
+					data,
+					new byte[0],
+					"geometry.Tiles.PSPEFakeSkull",
+					SKULL_MODEL
+			));
 			listener.con.sendRawPacket(MiscSerializer.readAllBytes(serializer));
 
 			TileDataUpdatePacket tileDataUpdatePacket = new TileDataUpdatePacket(x, y, z, tag);
