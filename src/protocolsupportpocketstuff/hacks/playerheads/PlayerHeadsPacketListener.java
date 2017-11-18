@@ -129,7 +129,6 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 				return;
 			}
 
-			System.out.println("And it is really an skull!");
 
 			NBTTagCompoundWrapper tag = itemStack.getTag();
 

@@ -9,4 +9,9 @@ public class MetadataProvider extends PEMetaProvider {
 	public float getEntitySize(NetworkEntity networkEntity) {
 		return PocketUtils.hasCustomScale(networkEntity.getId()) ? PocketUtils.getCustomScale(networkEntity.getId()) : 1;
 	}
+
+	@Override
+	public String getInteractText(NetworkEntity networkEntity) {
+		return null;
+	}
 }
