@@ -103,9 +103,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 			return;
 		}
 		if (packetId == PEPacketIDs.CHANGE_DIMENSION) {
-			System.out.println("CHANGE DIMENSION!!!");
 			for (CachedSkullBlock cachedSkullBlock : cachedSkullBlocks.values()) {
-				System.out.println("Killing skull head with ID: " + cachedSkullBlock.getEntityId());
 				PocketCon.sendPocketPacket(con, new EntityDestroyPacket(cachedSkullBlock.getEntityId()));
 			}
 			cachedSkullBlocks.clear();
@@ -132,11 +130,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 
 			NBTTagCompoundWrapper tag = itemStack.getTag();
 
-			System.out.println(tag);
-
 			String url = getUrlFromSkull(tag, true);
-
-			System.out.println("Equipped Skull URL: " + url);
 
 			selfEquippedCustomSkull = true;
 
@@ -170,12 +164,8 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		if (packetId == PEPacketIDs.MOB_ARMOR_EQUIPMENT) {
 			long entityId = VarNumberSerializer.readVarLong(data);
 
-			System.out.println("Equip for " + entityId);
-
 			if (!entityIdToUuid.containsKey(entityId))
 				return;
-
-			System.out.println("Contains!");
 
 			ItemStackWrapper itemStack = ItemStackSerializer.readItemStack(data, con.getVersion(), I18NData.DEFAULT_LOCALE, false); // Yes, it is from the client, but we don't want it to remap our stuff
 
@@ -187,15 +177,9 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 				return;
 			}
 
-			System.out.println("And it is really an skull!");
-
 			NBTTagCompoundWrapper tag = itemStack.getTag();
 
-			System.out.println(tag);
-
 			String url = getUrlFromSkull(tag, true);
-
-			System.out.println("Skin URL: " + url);
 
 			hasCustomSkull.add(entityId);
 			new Thread() {
@@ -452,27 +436,6 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 		cachedSkullBlock.spawn(this);
 	}
 
-	/* protected static void writeSkinData2(ProtocolVersion version, ByteBuf serializer, boolean isSkinUpdate, boolean isSlim, byte[] skindata) {
-		PESkinModel model = PESkinModel.getSkinModel(isSlim);
-		if (isSkinUpdate) {
-			StringSerializer.writeString(serializer, version, model.getSkinName());
-		}
-		StringSerializer.writeString(serializer, version, model.getSkinId());
-		if (isSkinUpdate) {
-			//TODO: find out how it is used and if its use matters.
-			StringSerializer.writeString(serializer, version, "Steve");
-		}
-		ArraySerializer.writeByteArray(serializer, version, skindata);
-		ArraySerializer.writeByteArray(serializer, version, new byte[0]); //cape data
-		StringSerializer.writeString(serializer, version, model.getGeometryId());
-		StringSerializer.writeString(serializer, version, model.getGeometryData());
-		try {
-			// StringSerializer.writeString(serializer, version, FileUtils.readFileToString(new File("D:\\custom_models.json")));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	} */
-
 	protected static byte[] toData(BufferedImage skin) {
 		Validate.isTrue(skin.getWidth() == 64, "Must be 64 pixels wide");
 		Validate.isTrue((skin.getHeight() == 64) || (skin.getHeight() == 32), "Must be 64 or 32 pixels high");
@@ -511,14 +474,13 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 
 		public void spawn(PlayerHeadsPacketListener listener) {
 			isSpawned = true;
-			System.out.println("Spawning...");
+
 			if (Skins.INSTANCE.hasPeSkin(url)) {
 				sendFakePlayer(listener, url, Skins.INSTANCE.getPeSkin(url));
 			} else {
 				new Thread() {
 					public void run() {
 						try {
-							System.out.println("URL: " + url);
 							BufferedImage image = ImageIO.read(new URL(url));
 							byte[] data = toData(image);
 							sendFakePlayer(listener, url, data);
