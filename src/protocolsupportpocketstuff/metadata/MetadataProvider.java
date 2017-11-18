@@ -12,6 +12,6 @@ public class MetadataProvider extends PEMetaProvider {
 
 	@Override
 	public String getInteractText(NetworkEntity networkEntity) {
-		return null;
+		return "Interact";
 	}
 }
