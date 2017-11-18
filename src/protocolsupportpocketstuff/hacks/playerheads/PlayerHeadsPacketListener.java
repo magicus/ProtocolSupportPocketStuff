@@ -303,7 +303,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 								skulls.put(position, dataValue);
 							}
 							if (skulls.containsKey(positionAbove)) {
-								skulls.put(position, dataValueAbove);
+								skulls.put(positionAbove, dataValueAbove);
 							}
 						}
 					}
@@ -318,7 +318,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 				NBTTagCompoundWrapper tag = ItemStackSerializer.readTag(data, true, con.getVersion());
 
 				if (!isSkull(tag))
-					return;
+					continue;
 
 				int x = tag.getIntNumber("x");
 				int y = tag.getIntNumber("y");
