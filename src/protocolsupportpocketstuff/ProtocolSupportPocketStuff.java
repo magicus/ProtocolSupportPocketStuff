@@ -88,7 +88,7 @@ public class ProtocolSupportPocketStuff extends JavaPlugin implements Listener {
 			con.addPacketListener(new ResourcePackListener(this, con));
 			if (getConfig().getBoolean("skins.PEtoPC")) { con.addPacketListener(new SkinPacket().new decodeHandler(this, con)); }
 			if (getConfig().getBoolean("hacks.holograms")) { con.addPacketListener(new HologramsPacketListener(this, con)); }
-			if (getConfig().getBoolean("hacks.player-heads-skins")) { con.addPacketListener(new PlayerHeadsPacketListener(this, con)); }
+			if (getConfig().getBoolean("hacks.player-heads-skins.skull-blocks")) { con.addPacketListener(new PlayerHeadsPacketListener(this, con)); }
 			if (platform == ServerPlatformIdentifier.SPIGOT) { // Spigot only hacks
 				if (getConfig().getBoolean("hacks.teams")) {
 					con.addPacketListener(new TeamsPacketListener(this, con));

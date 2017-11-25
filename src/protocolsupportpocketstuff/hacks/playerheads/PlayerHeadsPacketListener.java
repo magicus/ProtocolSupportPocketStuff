@@ -11,6 +11,7 @@ import protocolsupport.protocol.serializer.MiscSerializer;
 import protocolsupport.protocol.serializer.PositionSerializer;
 import protocolsupport.protocol.serializer.StringSerializer;
 import protocolsupport.protocol.serializer.VarNumberSerializer;
+import protocolsupport.protocol.typeremapper.pe.PEInventory;
 import protocolsupport.protocol.typeremapper.pe.PEPacketIDs;
 import protocolsupport.protocol.typeremapper.pe.PESkinModel;
 import protocolsupport.protocol.utils.NBTTagCompoundSerializer;
@@ -57,7 +58,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 	// Constants
 	private static final int SKULL_BLOCK_ID = 144;
 	private static final int SKULL_ITEM_ID = 397;
-	private static final int ARMOR_WINDOW_ID = 120;
+	private static final int ARMOR_WINDOW_ID = PEInventory.PESource.POCKET_ARMOR_EQUIPMENT;
 
 	public PlayerHeadsPacketListener(ProtocolSupportPocketStuff plugin, Connection con) {
 		this.plugin = plugin;
@@ -103,9 +104,6 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 			return;
 		}
 		if (packetId == PEPacketIDs.CHANGE_DIMENSION) {
-			for (CachedSkullBlock cachedSkullBlock : cachedSkullBlocks.values()) {
-				PocketCon.sendPocketPacket(con, new EntityDestroyPacket(cachedSkullBlock.getEntityId()));
-			}
 			cachedSkullBlocks.clear();
 			return;
 		}
@@ -284,7 +282,7 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 							int id = data.readUnsignedByte();
 
 							if (id == SKULL_BLOCK_ID) {
-								skulls.put(StuffUtils.toLong(chunkXStart + x, (idx * 16) + y, chunkZStart + z), -1);
+								skulls.put(StuffUtils.convertCoordinatesToLong(chunkXStart + x, (idx * 16) + y, chunkZStart + z), -1);
 							}
 						}
 					}
@@ -292,8 +290,8 @@ public class PlayerHeadsPacketListener extends Connection.PacketListener {
 				for (int x = 0; x < 16; x++) {
 					for (int z = 0; z < 16; z++) {
 						for (int y = 0; y < 16; y += 2) {
-							long position = StuffUtils.toLong(chunkXStart + x, (idx * 16) + y, chunkZStart + z);
-							long positionAbove = StuffUtils.toLong(chunkXStart + x, (idx * 16) + y + 1, chunkZStart + z);
+							long position = StuffUtils.convertCoordinatesToLong(chunkXStart + x, (idx * 16) + y, chunkZStart + z);
+							long positionAbove = StuffUtils.convertCoordinatesToLong(chunkXStart + x, (idx * 16) + y + 1, chunkZStart + z);
 							int state = data.readUnsignedByte();
 
 							int dataValueAbove = state >> 4;

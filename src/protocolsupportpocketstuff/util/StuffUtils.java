@@ -44,7 +44,7 @@ public class StuffUtils {
 		return ProtocolSupportPocketStuff.class.getClassLoader().getResourceAsStream(RESOURCES_DIRECTORY + "/" + name);
 	}
 
-	public static long toLong(int x, int y, int z) { // From ProtocolSupport's "Position" class, used here so we don't need to initialize an Position object every time
+	public static long convertCoordinatesToLong(int x, int y, int z) { // From ProtocolSupport's "Position" class, used here so we don't need to initialize an Position object every time
 		return ((x & 0x3FFFFFFL) << 38) | ((y & 0xFFFL) << 26) | ((z & 0x3FFFFFFL));
 	}
 
