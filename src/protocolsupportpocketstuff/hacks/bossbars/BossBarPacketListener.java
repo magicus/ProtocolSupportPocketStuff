@@ -38,16 +38,6 @@ public class BossBarPacketListener extends Connection.PacketListener {
 	// Constants
 	private static final String FAKE_BOSS_ENTITY_ID = "minecraft:pig"; // Entity id for a pig, which we fake spawn
 
-	private static final int DATA_FLAG_INVISIBLE = 5;
-	private static final int DATA_FLAG_IMMOBILE = 16;
-	private static final int DATA_FLAG_SILENT = 17;
-
-	private static final int METADATA_FLAGS = 0; // Encodes a long
-	private static final int METADATA_NAMETAG = 4; // Encodes a string
-	private static final int METADATA_SCALE = 38; // Encodes a float
-	private static final int METADATA_BOUNDING_BOX_WIDTH = 53; // Encodes a float
-	private static final int METADATA_BOUNDING_BOX_HEIGHT = 54; // Encodes a float
-
 	static {
 		try {
 			BOSS_UUID = PacketPlayOutBoss.class.getDeclaredField("a");
@@ -145,12 +135,13 @@ public class BossBarPacketListener extends Connection.PacketListener {
 		private CollectionsUtils.ArrayMap<DataWatcherObject<?>> getMetadata(String title) {
 			// Flag setting inspired by https://github.com/thebigsmileXD/BossBarAPI/blob/master/src/xenialdan/BossBarAPI/API.php
 			CollectionsUtils.ArrayMap<DataWatcherObject<?>> metadata = new CollectionsUtils.ArrayMap<>(76);
-			long flags = (1 << DATA_FLAG_INVISIBLE) ^ (1 << DATA_FLAG_IMMOBILE) ^ (1 << DATA_FLAG_SILENT);
-			metadata.put(METADATA_FLAGS, new DataWatcherObjectSVarLong(flags));
-			metadata.put(METADATA_NAMETAG, new DataWatcherObjectString(title));
-			metadata.put(METADATA_SCALE, new DataWatcherObjectFloatLe(0.0f));
-			metadata.put(METADATA_BOUNDING_BOX_WIDTH, new DataWatcherObjectFloatLe(0.0f));
-			metadata.put(METADATA_BOUNDING_BOX_HEIGHT, new DataWatcherObjectFloatLe(0.0f));
+
+			long flags = (1 << PeMetaBase.FLAG_INVISIBLE - 1) ^ (1 << PeMetaBase.FLAG_NO_AI - 1) ^ (1 << PeMetaBase.FLAG_SILENT - 1);
+			metadata.put(PeMetaBase.FLAGS, new DataWatcherObjectSVarLong(flags));
+			metadata.put(PeMetaBase.NAMETAG, new DataWatcherObjectString(title));
+			metadata.put(PeMetaBase.SCALE, new DataWatcherObjectFloatLe(0.0f));
+			metadata.put(PeMetaBase.BOUNDINGBOX_WIDTH, new DataWatcherObjectFloatLe(0.0f));
+			metadata.put(PeMetaBase.BOUNDINGBOX_HEIGTH, new DataWatcherObjectFloatLe(0.0f));
 			return metadata;
 		}
 
