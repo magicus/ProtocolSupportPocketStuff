@@ -111,7 +111,7 @@ public class ProtocolSupportPocketStuff extends JavaPlugin implements Listener {
 
 	@Override
 	public void onDisable() {
-		pm("Bye world :O");
+		pm("ProtocolSupportPocketStuff unloaded");
 	}
 
 	/**
