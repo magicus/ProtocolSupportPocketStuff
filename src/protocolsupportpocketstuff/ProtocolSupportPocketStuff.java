@@ -16,6 +16,7 @@ import protocolsupportpocketstuff.api.PocketStuffAPI;
 import protocolsupportpocketstuff.api.resourcepacks.ResourcePackManager;
 import protocolsupportpocketstuff.api.util.PocketCon;
 import protocolsupportpocketstuff.commands.CommandHandler;
+import protocolsupportpocketstuff.hacks.bossbars.BossBarPacketListener;
 import protocolsupportpocketstuff.metadata.EntityMetadataProvider;
 import protocolsupportpocketstuff.modals.ModalReceiver;
 import protocolsupportpocketstuff.packet.PEReceiver;
@@ -101,10 +102,10 @@ public class ProtocolSupportPocketStuff extends JavaPlugin implements Listener {
 			if (ServerPlatformIdentifier.get() == ServerPlatformIdentifier.SPIGOT) {
 				/*if (getConfig().getBoolean("hacks.itemframes")) {
 					con.addPacketListener(new ItemFramesPacketListener(this, con));
-				}
+				} */
 				if (getConfig().getBoolean("hacks.bossbars")) {
 					con.addPacketListener(new BossBarPacketListener(con));
-				}*/
+				}
 			}
 		}
 	}

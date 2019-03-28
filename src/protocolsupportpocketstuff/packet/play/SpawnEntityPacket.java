@@ -14,7 +14,7 @@ import java.util.List;
 public class SpawnEntityPacket extends PEPacket {
 
 	private long entityId;
-	private int entityType;
+	private String entityType;
 	private float x;
 	private float y;
 	private float z;
@@ -23,14 +23,15 @@ public class SpawnEntityPacket extends PEPacket {
 	private float motionZ;
 	private float pitch;
 	private float yaw;
+	private float headYaw;
 	private List<SetAttributesPacket.Attribute> attributes;
 	//private CollectionsUtils.ArrayMap<DataWatcherObject<?>> metadata;
 
 	public SpawnEntityPacket() { }
 
-	public SpawnEntityPacket(long entityId, int entityType, float x, float y, float z, 
-			float motionX, float motionY, float motionZ, float pitch, float yaw, 
-			List<SetAttributesPacket.Attribute> attributes, CollectionsUtils.ArrayMap<DataWatcherObject<?>> metadata) {
+	public SpawnEntityPacket(long entityId, String entityType, float x, float y, float z,
+							 float motionX, float motionY, float motionZ, float pitch, float yaw,
+							 float headYaw, List<SetAttributesPacket.Attribute> attributes, CollectionsUtils.ArrayMap<DataWatcherObject<?>> metadata) {
 		this.entityId = entityId;
 		this.entityType = entityType;
 		this.x = x;
@@ -41,6 +42,7 @@ public class SpawnEntityPacket extends PEPacket {
 		this.motionZ = motionZ;
 		this.pitch = pitch;
 		this.yaw = yaw;
+		this.headYaw = headYaw;
 		this.attributes = attributes;
 		//this.metadata = metadata;
 	}
@@ -54,15 +56,16 @@ public class SpawnEntityPacket extends PEPacket {
 	public void toData(ConnectionImpl connection, ByteBuf serializer) {
 		VarNumberSerializer.writeSVarLong(serializer, entityId); // entity ID
 		VarNumberSerializer.writeVarLong(serializer, entityId); // runtime ID
-		VarNumberSerializer.writeVarInt(serializer, entityType); // boss bar entity id
-		serializer.writeFloatLE(x); // x
-		serializer.writeFloatLE(y); // y
-		serializer.writeFloatLE(z); // z
-		serializer.writeFloatLE(motionX); // motx
-		serializer.writeFloatLE(motionY); // moty
-		serializer.writeFloatLE(motionZ); // motz
-		serializer.writeFloatLE(pitch); // pitch
-		serializer.writeFloatLE(yaw); // yaw
+		StringSerializer.writeString(serializer, connection.getVersion(), entityType);
+		serializer.writeFloatLE(x);
+		serializer.writeFloatLE(y);
+		serializer.writeFloatLE(z);
+		serializer.writeFloatLE(motionX);
+		serializer.writeFloatLE(motionY);
+		serializer.writeFloatLE(motionZ);
+		serializer.writeFloatLE(pitch);
+		serializer.writeFloatLE(yaw);
+		serializer.writeFloatLE(headYaw);
 		// We can't use SetAttributePackets#encodeAttributes because MCPE uses an different format in SpawnEntityPacket (why mojang?)
 		VarNumberSerializer.writeVarInt(serializer, attributes.size());
 		for (SetAttributesPacket.Attribute attribute : attributes) {
@@ -72,7 +75,7 @@ public class SpawnEntityPacket extends PEPacket {
 			serializer.writeFloatLE(attribute.getMaximum());
 		}
 		//TODO: fix
-		VarNumberSerializer.writeVarInt(serializer, 0);
+		VarNumberSerializer.writeVarInt(serializer, 0); // metadata count
 		//EntityMetadata.encodeMeta(serializer, connection.getVersion(), I18NData.DEFAULT_LOCALE, metadata);
 		VarNumberSerializer.writeVarInt(serializer, 0); //links, not used
 	}
