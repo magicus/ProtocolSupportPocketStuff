@@ -80,7 +80,7 @@ public class ProtocolSupportPocketStuff extends JavaPlugin implements Listener {
 		// = Commands = \\
 		getCommand("protocolsupportpocketstuff").setExecutor(new CommandHandler());
 		// = Welcome = \\
-		pm("Hello world! :D");
+		pm("ProtocolSupportPocketStuff loaded");
 	}
 
 	@EventHandler
