@@ -47,7 +47,6 @@ public class ModalDropdown extends ComplexModalUIElement {
 	/***
 	 * Sets all options and defaults to first element (0).
 	 * @param options
-	 * @param defaultIndex
 	 * @return this
 	 */
 	public ModalDropdown setOptions(List<String> options) {

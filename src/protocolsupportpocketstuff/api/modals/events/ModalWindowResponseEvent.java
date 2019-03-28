@@ -2,6 +2,7 @@ package protocolsupportpocketstuff.api.modals.events;
 
 import protocolsupport.api.Connection;
 import protocolsupportpocketstuff.api.modals.ModalType;
+import protocolsupportpocketstuff.api.modals.ModalWindow;
 
 /***
  * Event that is called when a PocketPlayer completes a {@link ModalWindow}.

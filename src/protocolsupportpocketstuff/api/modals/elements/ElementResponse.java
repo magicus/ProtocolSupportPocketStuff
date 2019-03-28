@@ -1,6 +1,11 @@
 package protocolsupportpocketstuff.api.modals.elements;
 
 import protocolsupport.libs.com.google.gson.JsonElement;
+import protocolsupportpocketstuff.api.modals.elements.complex.ModalDropdown;
+import protocolsupportpocketstuff.api.modals.elements.complex.ModalInput;
+import protocolsupportpocketstuff.api.modals.elements.complex.ModalSlider;
+import protocolsupportpocketstuff.api.modals.elements.complex.ModalStepSlider;
+import protocolsupportpocketstuff.api.modals.elements.complex.ModalToggle;
 
 public class ElementResponse {
 

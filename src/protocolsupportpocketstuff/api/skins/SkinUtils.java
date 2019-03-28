@@ -157,7 +157,7 @@ public class SkinUtils {
 	 * and to display it to both PC and PE players sends the right packets for an update.
 	 * <em>This method might runs async and may take some time to show results!</em>
 	 * @param player
-	 * @param skinUrl
+	 * @param url
 	 * @param isSlim
 	 */
 	public static void updateSkin(Player player, String url, boolean isSlim) {

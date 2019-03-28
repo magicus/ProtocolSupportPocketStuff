@@ -39,7 +39,7 @@ public class PocketPlayer {
 	 * Gets all pocket players on the server.
 	 * <br/><br/>
 	 * <i>If your goal is sending packets, we advise to use
-	 * {@link PocketCon.getPocketConnections} instead for better performance.</i>
+	 * {@link PocketCon#getPocketConnections()} instead for better performance.</i>
 	 * @return all pocket players.
 	 */
 	public static Collection<? extends Player> getPocketPlayers() {
@@ -58,7 +58,7 @@ public class PocketPlayer {
 	 * Sends a packet to pocket.
 	 * <br/><br/>
 	 * <i>When sending multiple packets to pocket it is advised
-	 * to get the connection using {@link ProtocolSupportAPI.getConnection}
+	 * to get the connection using {@link ProtocolSupportAPI#getConnection(Player)}
 	 * first and then use {@link PocketCon} to send the packets.</i>
 	 * @param player
 	 * @param packet
@@ -76,7 +76,7 @@ public class PocketPlayer {
 	 * The id can be used to track response of this modal in events.
 	 * <br/><br/>
 	 * <i>When sending multiple packets to pocket it is advised
-	 * to get the connection using {@link ProtocolSupportAPI.getConnection}
+	 * to get the connection using {@link ProtocolSupportAPI#getConnection(Player)}
 	 * first and then use {@link PocketCon} to send the packets.</i>
 	 * @param player
 	 * @param modal
@@ -90,10 +90,10 @@ public class PocketPlayer {
 	 * Sends a modal with an id specified.
 	 * <em>Nonono, don't use custom ids!</em>
 	 * If you like you can use this function in combination with
-	 * {@link Modals.INSTANCE.takeId} to send custom JSON to the player.
+	 * {@link Modals#takeId()} to send custom JSON to the player.
 	 * <br/><br/>
 	 * <i>When sending multiple packets to pocket it is advised
-	 * to get the connection using {@link ProtocolSupportAPI.getConnection}
+	 * to get the connection using {@link ProtocolSupportAPI#getConnection(Player)}
 	 * first and then use {@link PocketCon} to send the packets.</i>
 	 * @param player
 	 * @param modal
@@ -108,10 +108,10 @@ public class PocketPlayer {
 	 * Sends a modal with an id specified.
 	 * Nonono, don't use custom ids!
 	 * If you like you can use this function in combination with
-	 * {@link Modals.INSTANCE.takeId} to send custom JSON to the player.
+	 * {@link Modals#takeId()} to send custom JSON to the player.
 	 * <br/><br/>
 	 * <i>When sending multiple packets to pocket it is advised
-	 * to get the connection using {@link ProtocolSupportAPI.getConnection}
+	 * to get the connection using {@link ProtocolSupportAPI#getConnection(Player)}
 	 * first and then use {@link PocketCon} to send the packets.</i>
 	 * @param player
 	 * @param modalId
@@ -126,12 +126,12 @@ public class PocketPlayer {
 	 * Sends a modal with an id specified.
 	 * <em>Nonono, don't use custom ids!</em>
 	 * If you like you can use this function in combination with
-	 * {@link Modals.INSTANCE.takeId} to send custom JSON to the player.
+	 * {@link Modals#takeId()} to send custom JSON to the player.
 	 * This method also registers specified callback (if not null)
 	 * which is called after modal is completed and events are handled.
 	 * <br/><br/>
 	 * <i>When sending multiple packets to pocket it is advised
-	 * to get the connection using {@link ProtocolSupportAPI.getConnection}
+	 * to get the connection using {@link ProtocolSupportAPI#getConnection(Player)}
 	 * first and then use {@link PocketCon} to send the packets.</i>
 	 * @param player
 	 * @param modalId
@@ -147,7 +147,7 @@ public class PocketPlayer {
 	 * Sends a pc-like skin to a pocket connection.
 	 * <br/><br/>
 	 * <i>When sending multiple packets to pocket it is advised
-	 * to get the connection using {@link ProtocolSupportAPI.getConnection}
+	 * to get the connection using {@link ProtocolSupportAPI#getConnection(Player)}
 	 * first and then use {@link PocketCon} to send the packets.</i>
 	 * @param player
 	 * @param uuid
@@ -162,7 +162,7 @@ public class PocketPlayer {
 	 * Sends a PocketSkin to a pocket connection.
 	 * <br/><br/>
 	 * <i>When sending multiple packets to pocket it is advised
-	 * to get the connection using {@link ProtocolSupportAPI.getConnection}
+	 * to get the connection using {@link ProtocolSupportAPI#getConnection(Player)}
 	 * first and then use {@link PocketCon} to send the packets.</i>
 	 * @param player
 	 * @param uuid

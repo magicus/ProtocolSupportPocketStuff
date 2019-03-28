@@ -7,7 +7,7 @@ import protocolsupportpocketstuff.api.modals.ModalType;
 import protocolsupportpocketstuff.api.modals.elements.ElementResponse;
 
 /***
- * This event is called when a player completes a {@link ComplexModal}
+ * This event is called when a player completes a {@link protocolsupportpocketstuff.api.modals.ComplexForm}
  * We still need to add response api for this, but for now you can hack something with the jsonarray :D
  */
 public class ComplexFormResponseEvent extends ModalResponseEvent {
@@ -20,7 +20,7 @@ public class ComplexFormResponseEvent extends ModalResponseEvent {
 	 * @param modalId
 	 * @param modalJSON
 	 * @param modalType
-	 * @param jsonArray
+	 * @param responses
 	 */
 	public ComplexFormResponseEvent(Connection connection, int modalId, String modalJSON, ModalType modalType, List<ElementResponse> responses) {
 		super(connection, modalId, modalJSON, modalType);

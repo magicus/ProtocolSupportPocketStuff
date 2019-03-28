@@ -35,7 +35,7 @@ public class PocketCon {
 
 	/***
 	 * Checks if a connection is a pocket connection.
-	 * @param player
+	 * @param connection
 	 * @return the truth.
 	 */
 	public static boolean isPocketConnection(Connection connection) {
@@ -90,7 +90,8 @@ public class PocketCon {
 	 * Sends a modal with an id specified.
 	 * <em>Nonono, don't use custom ids!</em>
 	 * If you like you can use this function in combination with
-	 * {@link Modals.INSTANCE.takeId} to send custom JSON to the player.
+	 * {@link Modals#takeId()} to send custom JSON to the player.
+	 * @param connection
 	 * @param id
 	 * @param modalJSON
 	 * @return the id of the modal.
@@ -104,7 +105,7 @@ public class PocketCon {
 	 * Sends a modal with an id specified.
 	 * <em>Nonono, don't use custom ids!</em>
 	 * If you like you can use this function in combination with
-	 * {@link Modals.INSTANCE.takeId} to send custom JSON to the player.
+	 * {@link Modals#takeId()} to send custom JSON to the player.
 	 * This method also registers specified callback (if not null)
 	 * which is called after modal is completed and events are handled.
 	 * @param id
