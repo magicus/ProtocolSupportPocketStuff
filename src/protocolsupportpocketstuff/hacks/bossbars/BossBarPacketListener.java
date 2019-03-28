@@ -6,6 +6,7 @@ import protocolsupport.api.Connection;
 import protocolsupport.protocol.packet.middleimpl.clientbound.play.v_pe.EntityMetadata.PeMetaBase;
 import protocolsupport.protocol.utils.datawatcher.DataWatcherObject;
 import protocolsupport.protocol.utils.datawatcher.objects.DataWatcherObjectFloatLe;
+import protocolsupport.protocol.utils.datawatcher.objects.DataWatcherObjectSVarLong;
 import protocolsupport.protocol.utils.datawatcher.objects.DataWatcherObjectString;
 import protocolsupport.utils.CollectionsUtils;
 import protocolsupportpocketstuff.api.util.PocketCon;
@@ -35,7 +36,17 @@ public class BossBarPacketListener extends Connection.PacketListener {
 	private static Field BOSS_HEALTH;
 
 	// Constants
-	private static final String BOSS_BAR_ENTITY_ID = "minecraft:pig"; // Entity id for a pig, which we fake spawn
+	private static final String FAKE_BOSS_ENTITY_ID = "minecraft:pig"; // Entity id for a pig, which we fake spawn
+
+	private static final int DATA_FLAG_INVISIBLE = 5;
+	private static final int DATA_FLAG_IMMOBILE = 16;
+	private static final int DATA_FLAG_SILENT = 17;
+
+	private static final int METADATA_FLAGS = 0; // Encodes a long
+	private static final int METADATA_NAMETAG = 4; // Encodes a string
+	private static final int METADATA_SCALE = 38; // Encodes a float
+	private static final int METADATA_BOUNDING_BOX_WIDTH = 53; // Encodes a float
+	private static final int METADATA_BOUNDING_BOX_HEIGHT = 54; // Encodes a float
 
 	static {
 		try {
@@ -125,19 +136,32 @@ public class BossBarPacketListener extends Connection.PacketListener {
 			this.percentage = health;
 		}
 
-		public void spawn(BossBarPacketListener listener) {
-			CollectionsUtils.ArrayMap<DataWatcherObject<?>> metadata = new CollectionsUtils.ArrayMap<>(76);
-			metadata.put(4, new DataWatcherObjectString(title));
-			metadata.put(39, new DataWatcherObjectFloatLe(0.001f)); // scale
-			metadata.put(54, new DataWatcherObjectFloatLe(0.001f)); // bb width
-			metadata.put(55, new DataWatcherObjectFloatLe(0.001f)); // bb height
-
-			// The magic lies in setting the correct attributes to the spawn packet
-			List<SetAttributesPacket.Attribute> attributes = Arrays.asList(
+		private List<SetAttributesPacket.Attribute> getAttributes(float percentage) {
+			return Arrays.asList(
 				new SetAttributesPacket.Attribute("minecraft:health", 0.0f, 100f,
 					percentage * 100, percentage * 100));
+		}
 
-			SpawnEntityPacket packet = new SpawnEntityPacket(unique, BOSS_BAR_ENTITY_ID,
+		private CollectionsUtils.ArrayMap<DataWatcherObject<?>> getMetadata(String title) {
+			// Flag setting inspired by https://github.com/thebigsmileXD/BossBarAPI/blob/master/src/xenialdan/BossBarAPI/API.php
+			CollectionsUtils.ArrayMap<DataWatcherObject<?>> metadata = new CollectionsUtils.ArrayMap<>(76);
+			long flags = (1 << DATA_FLAG_INVISIBLE) ^ (1 << DATA_FLAG_IMMOBILE) ^ (1 << DATA_FLAG_SILENT);
+			metadata.put(METADATA_FLAGS, new DataWatcherObjectSVarLong(flags));
+			metadata.put(METADATA_NAMETAG, new DataWatcherObjectString(title));
+			metadata.put(METADATA_SCALE, new DataWatcherObjectFloatLe(0.0f));
+			metadata.put(METADATA_BOUNDING_BOX_WIDTH, new DataWatcherObjectFloatLe(0.0f));
+			metadata.put(METADATA_BOUNDING_BOX_HEIGHT, new DataWatcherObjectFloatLe(0.0f));
+			return metadata;
+		}
+
+		public void spawn(BossBarPacketListener listener) {
+			// The magic lies in setting the correct attributes to the spawn packet
+			List<SetAttributesPacket.Attribute> attributes = getAttributes(percentage);
+
+			// We propagate the title of the boss bar (the name of the boss) in the metadata
+			CollectionsUtils.ArrayMap<DataWatcherObject<?>> metadata = getMetadata(title);
+
+			SpawnEntityPacket packet = new SpawnEntityPacket(unique, FAKE_BOSS_ENTITY_ID,
 				0, -10, 0, // coordinates
 				0, 0, 0, // motion
 				0, 0, 0, // pitch & yaw
