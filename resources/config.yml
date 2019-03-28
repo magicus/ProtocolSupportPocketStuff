@@ -55,6 +55,7 @@ hacks:
  holograms: true
  itemframes: false
  bossbars: true
+ combat: false
  player-heads-skins:
   skull-blocks: false
   equipped-blocks: false

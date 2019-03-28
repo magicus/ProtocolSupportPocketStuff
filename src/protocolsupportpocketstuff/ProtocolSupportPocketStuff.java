@@ -17,6 +17,7 @@ import protocolsupportpocketstuff.api.resourcepacks.ResourcePackManager;
 import protocolsupportpocketstuff.api.util.PocketCon;
 import protocolsupportpocketstuff.commands.CommandHandler;
 import protocolsupportpocketstuff.hacks.bossbars.BossBarPacketListener;
+import protocolsupportpocketstuff.hacks.combat.CombatListener;
 import protocolsupportpocketstuff.metadata.EntityMetadataProvider;
 import protocolsupportpocketstuff.modals.ModalReceiver;
 import protocolsupportpocketstuff.packet.PEReceiver;
@@ -78,6 +79,13 @@ public class ProtocolSupportPocketStuff extends JavaPlugin implements Listener {
 			pm.registerEvents(provider, this);
 			PocketStuffAPI.registerPacketListeners(provider);
 		}
+
+		// = Combat = \\
+		if (getConfig().getBoolean("hacks.combat")) {
+			CombatListener provider = new CombatListener();
+			pm.registerEvents(provider, this);
+		}
+
 		// = Commands = \\
 		getCommand("protocolsupportpocketstuff").setExecutor(new CommandHandler());
 		// = Welcome = \\
