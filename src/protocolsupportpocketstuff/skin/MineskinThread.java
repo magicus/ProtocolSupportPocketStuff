@@ -101,7 +101,9 @@ public class MineskinThread extends Thread {
 		HttpRequest httpRequest = HttpRequest.post("http://api.mineskin.org/generate/upload?name=&model=" + (isSlim ? "slim" : "steve") + "&visibility=1")
 				.userAgent("ProtocolSupportPocketStuff");
 		httpRequest.part("file", "mcpe_skin.png", null, inputStream);
-		return GsonUtils.JSON_PARSER.parse(httpRequest.body()).getAsJsonObject();
+		String body = httpRequest.body();
+		plugin.debug("Result from MineSkin: " + body);
+		return GsonUtils.JSON_PARSER.parse(body).getAsJsonObject();
 	}
 
 }
